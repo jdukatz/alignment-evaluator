@@ -27,7 +27,7 @@ def build_aligned_corpus():
 	
 	aligned_text = []
 	for i in range(0, len(eng_sents)):
-		algn_snt = AlignedSent(swed_sents[i], eng_sents[i])
+		algn_snt = AlignedSent(eng_sents[i], swed_sents[i])
 		aligned_text.append(algn_snt)
 	return aligned_text
 	
