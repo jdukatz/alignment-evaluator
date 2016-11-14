@@ -56,7 +56,9 @@ def align_words(bitext):
 	dist = defaultdict(lambda: defaultdict(lambda: 1.0e-12))
 	
 	n = len(src_vocab)
-	probs = np.random.randint(1, high=9, size=len(trg_vocab))
+	#potential options for seeding dirichlet distribution; still looking for best solution
+	probs = np.random.gamma(10, size=len(trg_vocab))
+	#probs = np.random.randint(1, high=9, size=len(trg_vocab))
 	alphas = [x for x in probs]
 	dirichlet_probs = np.random.dirichlet(alphas, n)
 	
