@@ -2,7 +2,8 @@ from nltk.translate import AlignedSent, Alignment
 from nltk.translate.ibm1 import IBMModel1
 from nltk.translate.metrics import alignment_error_rate
 from collections import defaultdict
-from np.random import gamma, dirichlet
+from numpy.random import gamma, dirichlet
+from time import strftime
 
 def build_aligned_corpus():
 	print('building training corpus...')
@@ -11,9 +12,9 @@ def build_aligned_corpus():
 	de_sents = []
 	eng_sents = []
 
-	with open('corpora/DeEn/europarl-v7.de-en.tok.de', encoding='cp437') as de_file:
+	#with open('corpora/DeEn/europarl-v7.de-en.tok.de', encoding='cp437') as de_file:
 	#USE HEAD FILE FOR TESTING:
-	#with open('corpora/DeEn/europarl-v7.de-en.head.tok.de') as de_file:
+	with open('corpora/DeEn/europarl-v7.de-en.head.tok.de', encoding='cp437') as de_file:
 		for line in de_file:
 			de_sents_raw.append(line.rstrip())
 			
@@ -21,9 +22,9 @@ def build_aligned_corpus():
 		tokenized_sent = sentence.split(' ')
 		de_sents.append(tokenized_sent)
 	
-	with open('corpora/DeEn/europarl-v7.de-en.tok.en', encoding='cp437') as en_file:
+	#with open('corpora/DeEn/europarl-v7.de-en.tok.en', encoding='cp437') as en_file:
 	#USE HEAD FILE FOR TESTING
-	#with open('corpora/DeEn/europarl-v7.de-en.head.tok.en') as en_file:
+	with open('corpora/DeEn/europarl-v7.de-en.head.tok.en', encoding='cp437') as en_file:
 		for line in en_file:
 			eng_sents_raw.append(line.rstrip())
 			
@@ -39,8 +40,7 @@ def build_aligned_corpus():
 	return aligned_text
 	
 def align_words(bitext):
-	print('building alignment model..')
-		"""
+	"""
 	Feeds prior probabilities drawn from a Dirchlet distribution
 	into IBM model 1
 	Dirichlet distribution is set up as a grid of source and target words, eg:
@@ -52,44 +52,40 @@ def align_words(bitext):
 	...			...			...			...
 	"""
 	
+	print('Building vocabulary...')
 	src_vocab = set()
 	trg_vocab = set()
 	for aligned_sentence in bitext:
 		src_vocab.update(aligned_sentence.words)
 		trg_vocab.update(aligned_sentence.mots)
 	
+	
 	#fill in with the same default value as IBMModel
 	#we'll overwrite this in a moment
+	print('Generating dirichlet distribution...')
 	dist = defaultdict(lambda: defaultdict(lambda: 1.0e-12))
 	
 	n = len(src_vocab)
 	#potential options for seeding dirichlet distribution; still looking for best solution
 	probs = gamma(5, size=len(trg_vocab))
 	#probs = np.random.randint(1, high=9, size=len(trg_vocab))
-	alphas = [x for x in probs]
-	dirichlet_probs = dirichlet(alphas, n)
+	dirichlet_probs = dirichlet(probs, n)
 	
+	print('Applying distribution to vocab...')
 	for src_idx, src_word in enumerate(src_vocab):
 		for trg_idx, trg_word in enumerate(trg_vocab):
-			dist[src_word][trg_word] = dirichlet_probs[src_idx][trg_idx]
+			dist[trg_word][src_word] = dirichlet_probs[trg_idx][src_idx]
 
 	probability_tables = {}
 	probability_tables['translation_table'] = dist
-	ibm1 = IBMModel1(bitext, 1, probability_tables)
-	print('Model complete')
+	
+	print('started building model at: ')
+	print(strftime('%m-%d-%Y %H:%M:%S'))
+	print('building alignment model..')
+	ibm1 = IBMModel1(bitext, 5, probability_tables)
+	print('Model completed at: ', strftime('%m-%d-%Y %H:%M:%S'))
 	print('Aligning eval corpus...')
 	
-	# with open('basic_alignment_table.naacl', 'w') as alignment_file:
-		# for idx, sent_pair in enumerate(bitext):
-			# alignment_sorted = sorted(sent_pair.alignment)
-			# for word_pair in alignment_sorted:
-				# alignment_file.write(str(idx + 1))
-				# alignment_file.write(' ')
-				# alignment_file.write(str(word_pair[0]))
-				# alignment_file.write(' ')
-				# alignment_file.write(str(word_pair[1]))
-				# alignment_file.write('\n')
-				
 	#build corpus to be test aligned
 	de_sents_raw = []
 	eng_sents_raw = []
@@ -119,6 +115,17 @@ def align_words(bitext):
 		
 	#use trained model to run test alignment
 	ibm1._IBMModel1__align_all(aligned_test_text)
+	
+	with open('eval_alignment_dir.txt', 'w') as alignment_file:
+		for idx, sent_pair in enumerate(aligned_test_text):
+			alignment_sorted = sorted(sent_pair.alignment)
+			for word_pair in alignment_sorted:
+				alignment_file.write(str(idx + 1))
+				alignment_file.write(' ')
+				alignment_file.write(str(word_pair[0]))
+				alignment_file.write(' ')
+				alignment_file.write(str(word_pair[1]))
+				alignment_file.write('\n')
 	
 	return aligned_test_text
 
