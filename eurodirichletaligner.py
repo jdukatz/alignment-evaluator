@@ -12,9 +12,9 @@ def build_aligned_corpus():
 	de_sents = []
 	eng_sents = []
 
-	#with open('corpora/DeEn/europarl-v7.de-en.tok.de', encoding='cp437') as de_file:
+	#with open('corpora/DeEn/europarl-v7.de-en.head.tok.de', encoding='cp437') as de_file:
 	#USE HEAD FILE FOR TESTING:
-	with open('corpora/DeEn/europarl-v7.de-en.head.tok.de', encoding='cp437') as de_file:
+	with open('corpora/DeEn/europarl-v7.de-en.small.tok.de', encoding='cp437') as de_file:
 		for line in de_file:
 			de_sents_raw.append(line.rstrip())
 			
@@ -22,9 +22,9 @@ def build_aligned_corpus():
 		tokenized_sent = sentence.split(' ')
 		de_sents.append(tokenized_sent)
 	
-	#with open('corpora/DeEn/europarl-v7.de-en.tok.en', encoding='cp437') as en_file:
+	#with open('corpora/DeEn/europarl-v7.de-en.head.tok.en', encoding='cp437') as en_file:
 	#USE HEAD FILE FOR TESTING
-	with open('corpora/DeEn/europarl-v7.de-en.head.tok.en', encoding='cp437') as en_file:
+	with open('corpora/DeEn/europarl-v7.de-en.small.tok.en', encoding='cp437') as en_file:
 		for line in en_file:
 			eng_sents_raw.append(line.rstrip())
 			
@@ -42,8 +42,8 @@ def build_aligned_corpus():
 def align_words(bitext):
 	"""
 	Feeds prior probabilities drawn from a Dirchlet distribution
-	into IBM model 1
-	Dirichlet distribution is set up as a grid of source and target words, eg:
+	into IBM model 1. Dirichlet distribution is set up as a grid
+	of source and target words, eg:
 	
 				trg_word_1	trg_word_2	trg_word_3	...
 	src_word_1	value		value		value		...
@@ -56,9 +56,8 @@ def align_words(bitext):
 	src_vocab = set()
 	trg_vocab = set()
 	for aligned_sentence in bitext:
-		src_vocab.update(aligned_sentence.words)
-		trg_vocab.update(aligned_sentence.mots)
-	
+		src_vocab.update(aligned_sentence.mots)
+		trg_vocab.update(aligned_sentence.words)
 	
 	#fill in with the same default value as IBMModel
 	#we'll overwrite this in a moment
@@ -74,7 +73,8 @@ def align_words(bitext):
 	print('Applying distribution to vocab...')
 	for src_idx, src_word in enumerate(src_vocab):
 		for trg_idx, trg_word in enumerate(trg_vocab):
-			dist[trg_word][src_word] = dirichlet_probs[trg_idx][src_idx]
+			dist[trg_word][src_word] = dirichlet_probs[trg_idx][src_idx - 1]
+	del dirichlet_probs #save memory
 
 	probability_tables = {}
 	probability_tables['translation_table'] = dist
@@ -92,7 +92,7 @@ def align_words(bitext):
 	de_sents = []
 	eng_sents = []
 	
-	with open('corpora/DeEn/gold-aligned-corpus/de') as de_file:
+	with open('corpora/DeEn/gold-aligned-corpus/de', encoding='cp437') as de_file:
 		for line in de_file:
 			de_sents_raw.append(line.rstrip())
 			
@@ -100,7 +100,7 @@ def align_words(bitext):
 		tokenized_sent = sentence.split(' ')
 		de_sents.append(tokenized_sent)
 	
-	with open('corpora/DeEn/gold-aligned-corpus/en') as en_file:
+	with open('corpora/DeEn/gold-aligned-corpus/en', encoding='cp437') as en_file:
 		for line in en_file:
 			eng_sents_raw.append(line.rstrip())
 			
@@ -136,7 +136,7 @@ def build_gold_corpus():
 	print('building gold corpus...')
 	#get aligned sentences
 	gold_en_sents_raw = []
-	with open('corpora/DeEn/gold-aligned-corpus/en') as gold_en_file:
+	with open('corpora/DeEn/gold-aligned-corpus/en', encoding='cp437') as gold_en_file:
 		for line in gold_en_file:
 			gold_en_sents_raw.append(line.rstrip())
 	
@@ -146,7 +146,7 @@ def build_gold_corpus():
 		gold_en_sents.append(tokenized_sent)
 	
 	gold_de_sents_raw = []
-	with open('corpora/DeEn/gold-aligned-corpus/de') as gold_de_file:
+	with open('corpora/DeEn/gold-aligned-corpus/de', encoding='cp437') as gold_de_file:
 		for line in gold_de_file:
 			gold_de_sents_raw.append(line.rstrip())
 	

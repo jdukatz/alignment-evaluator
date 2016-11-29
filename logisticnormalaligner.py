@@ -61,17 +61,24 @@ def align_words(bitext):
 		trg_vocab.update(aligned_sentence.mots)
 	
 	print('Constructing distribution based on vocabulary...')
-	data = np.array([[np.random.randint(1, high=10) for x in range(0, len(trg_vocab) + 1)] for y in range(0, len(src_vocab) + 1)])
+	data = abs(np.random.normal(0, 0.1, (len(trg_vocab), len(src_vocab))))
+	eta_d = np.zeros((len(trg_vocab), 1))
+	np.append(data, eta_d, axis=1)
+	#data = np.array([[np.random.randint(1, high=5) for x in range(0, len(trg_vocab) + 1)] for y in range(0, len(src_vocab) + 1)])
+	#print('data: \n', data)
 	mu,covar = fit(data)
+	#print('mu: \n', mu)
+	#print('covar: \n', covar)
 	ln_function = pdf(mu, covar)
+	#print('distribution: \n', ln_function(data))
 	
 	#fill in with the same default value as IBMModel
 	#we'll overwrite this in a moment
 	dist = defaultdict(lambda: defaultdict(lambda: 1.0e-12))
 	
+	probs = ln_function(data)
 	print('Applying distribution to vocab...')
 	for src_idx, src_word in enumerate(src_vocab):
-		probs = ln_function(data)
 		for trg_idx, trg_word in enumerate(trg_vocab):
 			dist[trg_word][src_word] = probs[trg_idx]
 
@@ -90,7 +97,7 @@ def align_words(bitext):
 	de_sents = []
 	eng_sents = []
 	
-	with open('corpora/DeEn/gold-aligned-corpus/de') as de_file:
+	with open('corpora/DeEn/gold-aligned-corpus/de', encoding='cp437') as de_file:
 		for line in de_file:
 			de_sents_raw.append(line.rstrip())
 			
@@ -98,7 +105,7 @@ def align_words(bitext):
 		tokenized_sent = sentence.split(' ')
 		de_sents.append(tokenized_sent)
 	
-	with open('corpora/DeEn/gold-aligned-corpus/en') as en_file:
+	with open('corpora/DeEn/gold-aligned-corpus/en', encoding='cp437') as en_file:
 		for line in en_file:
 			eng_sents_raw.append(line.rstrip())
 			
@@ -114,7 +121,7 @@ def align_words(bitext):
 	#use trained model to run test alignment
 	ibm1._IBMModel1__align_all(aligned_test_text)
 	
-	with open('eval_alignment_dir.txt', 'w') as alignment_file:
+	with open('eval_alignment_ln.txt', 'w') as alignment_file:
 		for idx, sent_pair in enumerate(aligned_test_text):
 			alignment_sorted = sorted(sent_pair.alignment)
 			for word_pair in alignment_sorted:
@@ -134,7 +141,7 @@ def build_gold_corpus():
 	print('building gold corpus...')
 	#get aligned sentences
 	gold_en_sents_raw = []
-	with open('corpora/DeEn/gold-aligned-corpus/en') as gold_en_file:
+	with open('corpora/DeEn/gold-aligned-corpus/en', encoding='cp437') as gold_en_file:
 		for line in gold_en_file:
 			gold_en_sents_raw.append(line.rstrip())
 	
@@ -144,7 +151,7 @@ def build_gold_corpus():
 		gold_en_sents.append(tokenized_sent)
 	
 	gold_de_sents_raw = []
-	with open('corpora/DeEn/gold-aligned-corpus/de') as gold_de_file:
+	with open('corpora/DeEn/gold-aligned-corpus/de', encoding='cp437') as gold_de_file:
 		for line in gold_de_file:
 			gold_de_sents_raw.append(line.rstrip())
 	
