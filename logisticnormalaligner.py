@@ -13,9 +13,9 @@ def build_aligned_corpus():
 	de_sents = []
 	eng_sents = []
 
-	#with open('corpora/DeEn/europarl-v7.de-en.tok.de', encoding='cp437') as de_file:
-	#USE HEAD FILE FOR TESTING:
-	with open('corpora/DeEn/europarl-v7.de-en.small.tok.de', encoding='cp437') as de_file:
+	with open('corpora/DeEn/europarl-v7.de-en.head.tok.de', encoding='cp437') as de_file:
+	#USE .SMALL FILE FOR TESTING:
+	#with open('corpora/DeEn/europarl-v7.de-en.small.tok.de', encoding='cp437') as de_file:
 		for line in de_file:
 			de_sents_raw.append(line.rstrip())
 			
@@ -23,9 +23,9 @@ def build_aligned_corpus():
 		tokenized_sent = sentence.split(' ')
 		de_sents.append(tokenized_sent)
 	
-	#with open('corpora/DeEn/europarl-v7.de-en.tok.en', encoding='cp437') as en_file:
-	#USE HEAD FILE FOR TESTING
-	with open('corpora/DeEn/europarl-v7.de-en.small.tok.en', encoding='cp437') as en_file:
+	with open('corpora/DeEn/europarl-v7.de-en.head.tok.en', encoding='cp437') as en_file:
+	#USE .SMALL FILE FOR TESTING
+	#with open('corpora/DeEn/europarl-v7.de-en.small.tok.en', encoding='cp437') as en_file:
 		for line in en_file:
 			eng_sents_raw.append(line.rstrip())
 			
@@ -35,7 +35,7 @@ def build_aligned_corpus():
 	
 	aligned_text = []
 	for i in range(0, len(eng_sents)):
-		algn_snt = AlignedSent(eng_sents[i], de_sents[i])
+		algn_snt = AlignedSent(de_sents[i], eng_sents[i])
 		aligned_text.append(algn_snt)
 		
 	return aligned_text
@@ -59,14 +59,23 @@ def align_words(bitext):
 	for aligned_sentence in bitext:
 		src_vocab.update(aligned_sentence.words)
 		trg_vocab.update(aligned_sentence.mots)
+		
+	print(len(src_vocab))
+	print(len(trg_vocab))
 	
 	print('Constructing distribution based on vocabulary...')
-	data = abs(np.random.normal(0, 0.1, (len(trg_vocab), len(src_vocab))))
+	data = abs(np.random.normal(.5, 0.1, (len(trg_vocab), len(src_vocab))))
 	eta_d = np.zeros((len(trg_vocab), 1))
 	np.append(data, eta_d, axis=1)
+	print("data")
+	print(data)
 	#data = np.array([[np.random.randint(1, high=5) for x in range(0, len(trg_vocab) + 1)] for y in range(0, len(src_vocab) + 1)])
 	#print('data: \n', data)
 	mu,covar = fit(data)
+	print("mu")
+	print(mu)
+	print("covar")
+	print(covar)
 	#print('mu: \n', mu)
 	#print('covar: \n', covar)
 	ln_function = pdf(mu, covar)
@@ -76,18 +85,32 @@ def align_words(bitext):
 	#we'll overwrite this in a moment
 	dist = defaultdict(lambda: defaultdict(lambda: 1.0e-12))
 	
-	probs = ln_function(data)
+	probs = ln_function(data) #generate probabilities
+	print("probs")
+	print(probs)
+	
+	with open('ln_distrib.txt', 'w') as dist_file:
+		for value in probs:
+			dist_file.write(str(value))
+	
+	#normalize values
+	sum = np.sum(probs)
+	for idx, element in enumerate(probs):
+		normalized_value = element / sum
+		probs[idx] = normalized_value
+			
 	print('Applying distribution to vocab...')
 	for src_idx, src_word in enumerate(src_vocab):
 		for trg_idx, trg_word in enumerate(trg_vocab):
 			dist[trg_word][src_word] = probs[trg_idx]
+	del probs #save memory
 
 	probability_tables = {'translation_table': dist}
 	
 	print('started building model at: ')
 	print(strftime('%m-%d-%Y %H:%M:%S'))
 	print('building alignment model..')
-	ibm1 = IBMModel1(bitext, 5, probability_tables)
+	ibm1 = IBMModel1(bitext, 10, probability_tables)
 	print('Model completed at: ', strftime('%m-%d-%Y %H:%M:%S'))
 	print('Aligning eval corpus...')
 	
